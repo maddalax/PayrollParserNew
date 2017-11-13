@@ -1,0 +1,154 @@
+<html>
+<head>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.2.13/semantic.min.css" /></head>
+<body>
+
+<div id="app" style="margin-top: 50px">
+    <div>
+        <div class="ui center aligned text container" style="margin-top: 50px">
+        <h3>Payroll Pdf To Money Format Exporter</h3>0
+        <br>
+        </div>
+        <div v-if="!hasExported" class="ui left aligned text container">
+            <div v-if="upload == null">
+                <p><strong>1) </strong> Upload your payroll pdf.</p>
+                <label for="pdf-upload-input" class="ui icon fluid primary button">
+                    <i class="cloud icon"></i>
+                    Select Payroll Pdf
+                </label>
+            </div>
+            <div v-if="upload != null">
+                <p><strong>2) </strong> Verify the totals are correct and select a date to import payroll with.</p>
+                <h3><strong>Total Payroll:</strong> <span style="color: darkred">${{upload.totalNetPay.toFixed(2)}}</span></h3>
+
+                <div class="ui labeled fluid input">
+                    <div class="ui very basic primary label">
+                        Select A Date
+                    </div>
+                    <input type="date" v-model="selectedDate">
+                </div>
+
+                <br>
+
+                <div @click="startExport" class="ui fluid primary button" v-if="selectedDate != null">
+                    Start Export With {{selectedDate}}
+                </div>
+
+
+                <table class="ui celled table">
+                    <thead>
+                    <tr>
+                        <th>Employee #</th>
+                        <th>Net Pay</th>
+                        <th>Check Number</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr v-for="p in upload.employees">
+                        <td>{{p.id}}</td>
+                        <td>${{p.netPay}}</td>
+                        <td>{{p.checkNumber}}</td>
+                    </tr>
+                </table>
+            </div>      
+        </div>
+        <div v-if="hasExported" class="ui left aligned container">
+            <div class="ui success message">
+                <div class="header">
+                    Successfully exported money file..
+                </div>
+                <p>{{exportPath}}</p>
+            </div>
+            <br>
+            <h2>Import instructions:</h2>
+            
+           
+            <p><strong>Step 1: Open Microsoft Money</strong></p>
+            <img width="90%" height="525px" src="/images/openMoney.png">
+            <br><br>
+            <h3>
+                <strong>Step 2:</strong> Select File -> Import -> Recover Accounts
+            </h3>
+            <img src="/images/recoverAccounts.png" height="525px">
+            <div class="ui negative message">Make sure Recover Accounts is selected
+            and NOT downloaded statements, it will mess up payroll if downloaded
+            statements is selected.</div>
+
+            <h3><strong>Step 1:</strong></h3>
+            <p>
+                Locate the exported file at the path written above.
+                It will contain the date you selected as apart of the file name.
+            </p>
+            <img src="/images/findFile.png" height="525px">
+            
+            <h3><strong>Step 4:</strong></h3>
+            <p>
+                Select the account you would like to import into.
+                This will most likely be the <strong>Payroll</strong> account.
+                
+                After that is selected, follow the on-screen prompts.
+            </p>
+            <p>If there is any other popups other than selecting an account
+            just choose the default value.</p>
+            <br><br><br>
+
+        </div>
+      
+        <input type="file" id="pdf-upload-input" style="display: none" accept="application/pdf">
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.2.13/semantic.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.5.3/vue.min.js"></script>
+</body>
+</html>
+
+<script>
+    var v = new Vue({
+        el : '#app',
+        data : {
+            upload : null,
+            selectedDate : null,
+            hasExported : false,
+            exportPath : null
+        },
+        methods : {
+            startExport : function () {
+                var context = this;
+                var date = new Date(this.selectedDate).getTime();
+                $.ajax({
+                    type: "POST",
+                    url: "/Api/Payroll/ExportFile",
+                    data:  JSON.stringify({
+                        Date : date,
+                        Employees : this.upload.employees
+                    }),
+                    success: function (res) {
+                       context.exportPath = res;
+                       context.hasExported = true;
+                    },
+                    contentType: 'application/json'
+                });
+            }
+        }
+    });
+    
+    $('#pdf-upload-input').on('change', function () {
+        var input = document.getElementById("pdf-upload-input");
+        var file = input.files[0];
+        var formData = new FormData();
+        formData.append('file', file);
+        $.ajax({
+            type: "POST",
+            url: "/Api/Payroll/Upload",
+            data:  formData,
+            success: function (res) {
+               v.upload = res;
+            },
+            processData: false,  // tell jQuery not to process the data
+            contentType: false
+        });
+    });
+    
+</script>
