@@ -1,9 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using Newtonsoft.Json;
 using PayrollParser.Models;
 using PayrollParser.Services;
 
@@ -32,7 +30,7 @@ namespace PayrollParser.Controllers
             }
             catch (Exception e)
             {
-                return BadRequest(e.Message);
+                return BadRequest(e.StackTrace);
             }        
         }
 

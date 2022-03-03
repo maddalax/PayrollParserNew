@@ -1,36 +1,46 @@
-﻿using System;
-using System.IO;
-using Microsoft.AspNetCore;
-using Microsoft.AspNetCore.Hosting;
-using PayrollParser.Models;
-using PayrollParser.Services;
+using System.Diagnostics;
+using System.Reflection;
+using System.Runtime.InteropServices;
 
-namespace PayrollParser
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddControllers();
+
+var app = builder.Build();
+
+app.MapControllers();
+
+app.UseFileServer();
+
+Task.Run(() =>
 {
-    public class Program
+    try
     {
-        public static void Main(string[] args)
+        var url = "http://localhost:5000";
+        Task.Delay(3000);
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
-            
-            BuildWebHost(args).Run();
-            
-            /*
-            var service = new PayrollParseService();
-            var employees = service.ParseToEmployees("/Users/maddev/Downloads/payoll.pdf");
-            var exportService = new MoneyExportService();
-            var file = exportService.ExportFile(new MoneyExportRequest
-            {
-                Employees = employees,
-                Date = 1510517593789
-            });
-            Console.WriteLine(file);
-            */
+            Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
         }
-
-        public static IWebHost BuildWebHost(string[] args) =>
-            WebHost.CreateDefaultBuilder(args)
-                .UseStartup<Startup>()
-                .UseContentRoot(Directory.GetCurrentDirectory())
-                .Build();
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        {
+            Process.Start("xdg-open", url);
+        }
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+        {
+            Process.Start("open", url);
+        }
+        else
+        {
+            // throw 
+        }
     }
-}
+    catch (Exception e)
+    {
+        Console.WriteLine("Go to http://localhost:5000 in your browser");
+    }
+});
+
+app.Run("http://localhost:5000");
+
+

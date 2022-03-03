@@ -33,51 +33,43 @@ namespace PayrollParser.Services
         {
             var result = Regex.Split(text, @"\r?\n|\r");
             var lines = result.Select(w => w.Trim())
-                .Where(w => Regex.IsMatch(w.Substring(0, 4), @"^\d"))
-                .Where(w => w.Contains("$"))
-                .Select(w => new string(w.Where(s => !char.IsLetter(s)).ToArray()))
-                .Select(w => w.Replace(",", "").Replace("'", ""))
-                .Select(w => w.Replace("$", ""))
-                .Select(w => w.Replace("-", ""))
+                .Where(w => w.Contains('-') && w.Contains('$') && w.Contains('.'))
                 .Select(w => Regex.Replace(w, @"\s+", " "))
-                .Select(w =>
-                {
-                    var indexes = StringUtil.FindIndexes(w, ".");
-                    foreach (var index in indexes)
-                    {
-                        var charAfter = w[index + 1];
-                        var charBefore = w[index - 1];
-                        if (!char.IsNumber(charAfter) || !char.IsNumber(charBefore))
-                            w = w.Remove(index, 1);
-                    }
-                    return w;
-                })
-                .Select(w => Regex.Replace(w, @"\s+", " "));
+                .Select(w => new string(w.Where(s => char.IsNumber(s) || char.IsWhiteSpace(s) || s is '.' or ',').ToArray()))
+                .Select(w => Regex.Replace(w, @"\s+", " "))
+                .Where(w => w.Length > 0)
+                .Select(w => w.Trim());
 
             var split = lines
-                .Select(w => w.Split(" "));
+                .Select(w => w.Split(" "))
+                .ToArray();
 
             var employees = new List<Employee>();
             foreach (var s in split)
             {
-                var id = s[0];
-                var gross = s[3];
-                var deductions = s[4];
-                var net = s[5];
-                var checkNumber = s[6];
-
-                if (checkNumber.IndexOf(":", StringComparison.Ordinal) != -1)
-                    checkNumber = checkNumber.Substring(0, checkNumber.IndexOf(":", StringComparison.Ordinal));
-
-                var employee = new Employee
+                var v = s.Where(c => !c.Equals(".") && !c.Equals(",")).ToArray();
+                try
                 {
-                    CheckNumber = Convert.ToInt64(checkNumber),
-                    Id = Convert.ToInt32(id),
-                    GrossPay = Convert.ToDecimal(gross),
-                    Deductions = Convert.ToDecimal(deductions),
-                    NetPay = Convert.ToDecimal(net)
-                };
-                employees.Add(employee);
+                    var id = v[0];
+                    var gross = v[3];
+                    var deductions = v[4];
+                    var net = v[5];
+                    var checkNumber = v[6];
+
+                    var employee = new Employee
+                    {
+                        CheckNumber = Convert.ToInt64(checkNumber),
+                        Id = Convert.ToInt32(id),
+                        GrossPay = Convert.ToDecimal(gross),
+                        Deductions = Convert.ToDecimal(deductions),
+                        NetPay = Convert.ToDecimal(net)
+                    };
+                    employees.Add(employee);
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e);
+                }
             }
             return employees;
         }
